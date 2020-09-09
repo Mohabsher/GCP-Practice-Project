@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPC Networking</title>
+</head>
+<body>
+    <h1>Create an auto mode VPC network with firewall rules</h1>
+        <p>gcloud compute networks create mynetwork --project=qwiklabs-gcp-03-c3ac5a384715 --subnet-mode=auto --bgp-routing-mode=regional</p>
+        <p>gcloud compute firewall-rules create mynetwork-allow-icmp --project=qwiklabs-gcp-03-c3ac5a384715 --network=projects/qwiklabs-gcp-03-c3ac5a384715/global/networks/mynetwork --description=Allows\ ICMP\ connections\ from\ any\ source\ to\ any\ instance\ on\ the\ network. --direction=INGRESS --priority=65534 --source-ranges=0.0.0.0/0 --action=ALLOW --rules=icmp</p>
+        <p>gcloud compute firewall-rules create mynetwork-allow-internal --project=qwiklabs-gcp-03-c3ac5a384715 --network=projects/qwiklabs-gcp-03-c3ac5a384715/global/networks/mynetwork --description=Allows\ connections\ from\ any\ source\ in\ the\ network\ IP\ range\ to\ any\ instance\ on\ the\ network\ using\ all\ protocols. --direction=INGRESS --priority=65534 --source-ranges=10.128.0.0/9 --action=ALLOW --rules=all</p>
+        <p>gcloud compute firewall-rules create mynetwork-allow-rdp --project=qwiklabs-gcp-03-c3ac5a384715 --network=projects/qwiklabs-gcp-03-c3ac5a384715/global/networks/mynetwork --description=Allows\ RDP\ connections\ from\ any\ source\ to\ any\ instance\ on\ the\ network\ using\ port\ 3389. --direction=INGRESS --priority=65534 --source-ranges=0.0.0.0/0 --action=ALLOW --rules=tcp:3389</p>
+        <p>gcloud compute firewall-rules create mynetwork-allow-ssh --project=qwiklabs-gcp-03-c3ac5a384715 --network=projects/qwiklabs-gcp-03-c3ac5a384715/global/networks/mynetwork --description=Allows\ TCP\ connections\ from\ any\ source\ to\ any\ instance\ on\ the\ network\ using\ port\ 22. --direction=INGRESS --priority=65534 --source-ranges=0.0.0.0/0 --action=ALLOW --rules=tcp:22</p>
+            <h2>Create a VM instance in us-central1</h2>   
+                <p>gcloud beta compute --project=qwiklabs-gcp-03-c3ac5a384715 instances create mynet-us-vm --zone=us-central1-c --machine-type=n1-standard-1 --subnet=mynetwork --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=721139381597-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-9-stretch-v20200902 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=mynet-us-vm --reservation-affinity=any</p>
+            <h2>Create a VM instance in europe-west1</h2>
+                <p>gcloud beta compute --project=qwiklabs-gcp-03-c3ac5a384715 instances create mynet-eu-vm --zone=europe-west1-c --machine-type=n1-standard-1 --subnet=mynetwork --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=721139381597-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-9-stretch-v20200902 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=mynet-eu-vm --reservation-affinity=any</p> 
+    <h1>Create an auto mode VPC network with firewall rules</h1>
+        <p>gcloud compute networks create managementnet --project=qwiklabs-gcp-03-c3ac5a384715 --subnet-mode=custom --bgp-routing-mode=regional</p>
+        <P>gcloud compute networks subnets create managementsubnet-us --project=qwiklabs-gcp-03-c3ac5a384715 --range=10.130.0.0/20 --network=managementnet --region=us-central1</P>
+            <h2>Create the privatenet network</h2>    
+                <p>gcloud compute networks create privatenet --subnet-mode=custom</p>
+                    <h3>Create the privatesubnet-us subnet</h3>
+                        <p>gcloud compute networks subnets create privatesubnet-us --network=privatenet --region=us-central1 --range=172.16.0.0/24</p>
+                    <h3>Create the privatesubnet-eu subnet</h3>
+                        <p>gcloud compute networks subnets create privatesubnet-eu --network=privatenet --region=europe-west1 --range=172.20.0.0/20</p>
+                    <h3>List the available VPC networks</h3>
+                        <p>gcloud compute networks list</p>
+                    <h3>List the available VPC subnets (sorted by VPC network)</h3>
+                        <p>gcloud compute networks subnets list --sort-by=NETWORK</p>
+            <h2>Create the firewall rules for managementnet</h2>
+                <p>gcloud compute --project=qwiklabs-gcp-03-c3ac5a384715 firewall-rules create managementnet-allow-icmp-ssh-rdp --direction=INGRESS --priority=1000 --network=managementnet --action=ALLOW --rules=tcp:22,tcp:3389,icmp --source-ranges=0.0.0.0/0</p>
+            <h2>Create the firewall rules for privatenet</h2>
+                <p>gcloud compute firewall-rules create privatenet-allow-icmp-ssh-rdp --direction=INGRESS --priority=1000 --network=privatenet --action=ALLOW --rules=icmp,tcp:22,tcp:3389 --source-ranges=0.0.0.0/0</p>
+                    <h3>List all the firewall rules (sorted by VPC network)</h3>
+                        <p>gcloud compute firewall-rules list --sort-by=NETWORK</p>
+                    <h3>Create the managementnet-us-vm instance</h3>
+                        <p>gcloud beta compute --project=qwiklabs-gcp-03-c3ac5a384715 instances create managementnet-us-vm --zone=us-central1-c --machine-type=f1-micro --subnet=managementsubnet-us --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=721139381597-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-9-stretch-v20200902 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=managementnet-us-vm --reservation-affinity=any</p>
+                    <h3>Create the privatenet-us-vm instance</h3>
+                        <p>gcloud compute instances create privatenet-us-vm --zone=us-central1-c --machine-type=f1-micro --subnet=privatesubnet-us</p>
+                    <h3>List all the VM instances (sorted by zone),</h3>
+                        <p>gcloud compute instances list --sort-by=ZONE</p>
+
+            </body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Working with Virtual Machines</title>
+
+</head>
+<body>
+    <h1>Create the VM</h1>
+        <p>gcloud beta compute --project=qwiklabs-gcp-04-f9f9ec099087 instances create mc-server --zone=us-central1-a --machine-type=n1-standard-1 --subnet=default --address=34.122.161.13 --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=134288275413-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/trace.append,https://www.googleapis.com/auth/devstorage.read_write --tags=minecraft-server --image=debian-9-stretch-v20200902 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=mc-server --create-disk=mode=rw,size=50,type=projects/qwiklabs-gcp-04-f9f9ec099087/zones/us-central1-a/diskTypes/pd-ssd,name=minecraft-disk,device-name=minecraft-disk --reservation-affinity=any</p>
+    <h1>Prepare the data disk</h1>
+        <H2>Create a directory that serves as the mount point for the data disk "SSH"</H2>
+            <p>sudo mkdir -p /home/minecraft</p>
+        <h2>Format the disk</h2>
+            <p>sudo mkfs.ext4 -F -E lazy_itable_init=0,\ lazy_journal_init=0,discard \ /dev/disk/by-id/google-minecraft-disk</p>
+        <h2>Mount the disk</h2>
+            <p>sudo mount -o discard,defaults /dev/disk/by-id/google-minecraft-disk /home/minecraft</p>
+    <h1>Install and run the application</h1>
+        <h2>Install the Java Runtime Environment (JRE) and the Minecraft server</h2>
+            <h3>Update the Debian repositories on the VM:</h3>
+                <p>sudo apt-get update</p>
+            <h3>Install the headless JRE:</h3>
+                <p>sudo apt-get install -y default-jre-headless</p>
+            <h3>Navigate to the directory where the persistent disk is mounted:</h3>
+                <p>cd /home/minecraft
+                    install wget
+                    sudo apt-get install wget
+                    </p>
+            <h3>Download the current Minecraft server JAR file (1.11.2 JAR):</h3>
+                <p>sudo wget https://launcher.mojang.com/v1/objects/d0d0fe2b1dc6ab4c65554cb734270872b72dadd6/server.jar</p>
+        <h2>Initialize the Minecraft server</h2>
+            <p>sudo java -Xmx1024M -Xms1024M -jar server.jar nogui</p>
+            <h3>See the files that were created in the first initialization of the Minecraft server:
+                Edit the EULA (Edit erver.properties file to change the default behavior of the Minecraft server.):</h3>
+                <p>sudo nano eula.txt</p>
+        <h2>Create a virtual terminal screen to start the Minecraft server</h2>
+            <h3>Install screen:</h3>
+                <p>sudo apt-get install -y screen</p>
+            <h3>Start your Minecraft server in a screen virtual terminal:</h3>
+                <p>sudo screen -S mcs java -Xmx1024M -Xms1024M -jar server.jar nogui</p>
+    <h1>Allow client traffic</h1>
+        <p>gcloud compute --project=qwiklabs-gcp-04-f9f9ec099087 firewall-rules create minecraft-rule --direction=INGRESS --priority=1000 --network=default --action=ALLOW --rules=tcp:25565 --source-ranges=0.0.0.0/0 --target-tags=minecraft-server</p>
+    <h1>Schedule regular backups</h1>
+    <p>export YOUR_BUCKET_NAME=qwiklabsgcp04f9f9ec099087
+        echo $YOUR_BUCKET_NAME
+        </p>    
+            <h3>Create the bucket using the gsutil tool</h3>
+                <p>gsutil mb gs://$YOUR_BUCKET_NAME-minecraft-backup</p>
+            <h3>Create a backup script
+                Navigate to your home directory:
+            </h3>
+                <p>cd /home/minecraft</p>
+            <h3>Create the script</h3>
+                <p>sudo nano /home/minecraft/backup.sh</p>
+                    <p>#!/bin/bash screen -r mcs -X stuff '/save-all\n/save-off\n' /usr/bin/gsutil cp -R ${BASH_SOURCE%/*}/world gs://${YOUR_BUCKET_NAME}-minecraft-backup/$(date "+%Y%m%d-%H%M%S")-world screen -r mcs -X stuff '/save-on\n'</p>
+            <h3>Make the script executable:</h3>
+                <p>sudo chmod 755 /home/minecraft/backup.sh</p>
+    <h1>Test the backup script and schedule a cron job</h1>
+        <p>. /home/minecraft/backup.sh</p>
+            <h3>open the cron table for editing:</h3>
+                <p>sudo crontab –e</p>
+    <h1>Server maintenance</h1>
+        <p>sudo screen -r -X stuff '/stop\n'</p>
+    
+</body>
+</html>
